@@ -1,0 +1,51 @@
+version: '3'
+
+services:
+    app:
+      build: ./node
+      container_name: node
+      entrypoint: dockerize -wait tcp://db:3306 -timeout 20s docker-entrypoint.sh 
+      command: node_modules/.bin/nodemon --exec node index.js
+      networks: 
+        - pancadanet
+      volumes: 
+        - ./node:/usr/src/app
+        - /usr/src/app/node_modules
+      tty: true
+      ports: 
+        - "3000:3000"
+      depends_on: 
+        - db
+
+    db:
+      platform: linux/x86_64
+      build: 
+        context: mysql
+      command: --innodb-use-native-aio=0 --explicit_defaults_for_timestamp=1
+      container_name: db
+      restart: always
+      tty: true
+      expose:
+        - 3306
+      volumes: 
+        - pancada_db_data:/var/lib/mysql
+      networks: 
+        - pancadanet
+
+    nginx:
+        build:
+          context: nginx
+        restart: always
+        ports:
+          - "8080:80"
+        networks: 
+          - pancadanet
+        depends_on:
+          - app
+
+networks: 
+  pancadanet:
+    driver: bridge 
+
+volumes:
+  pancada_db_data:
